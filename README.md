@@ -20,6 +20,51 @@ npm run build
 State is held in React and seeded with four sample projects. There is no back
 end yet; the shape of the store is what a back end will fill.
 
+## How people use it
+
+**My tasks** is where the work happens. A task is not a separate record — it is
+a delivery plan step with someone's name on it, so working a task edits the plan
+directly and the two can never disagree. Tasks group into Overdue, Blocked, Due
+today, Due this week, Waiting on the client, Later and Done, and each one shows
+the single next thing it needs: start it, upload the deliverable, complete it,
+or chase the acknowledgement. Marking yourself blocked requires a reason, and
+puts the project At risk on both dashboards.
+
+**Alerts** are derived from the data on every render, never stored, so an alert
+cannot outlive its cause — fix the step and it is gone. They cover overdue and
+imminent work, blocked steps, missing evidence, submissions waiting on the
+client or returned for correction, stale client workbooks, unlodged monthly
+reports, invoices with no progress report, and contracts running out. The bell
+shows the ones addressed to you; the dashboard opens with the same list as
+"what needs you today". Only what has been read is remembered.
+
+**Calendar** is one view of everything dated across the business: step starts
+and planned ends, submissions due, invoices, monthly reports, and contract
+start and end dates. Nothing is scheduled separately — move a date on a record
+and the calendar moves with it. Month grid or agenda, filterable by project,
+type, and whether it is yours.
+
+## Roles
+
+`src/lib/permissions.ts` holds the access model. Access is always scoped to the
+projects someone is actually on: being a project manager never means being
+manager of everything.
+
+| Role | Sees | Changes |
+|---|---|---|
+| **Director** | Every project, all money | Everything, including creating and deleting projects and managing people |
+| **Project manager** | Their projects, with money | Plan, register, setup, invoices on their own projects |
+| **Project lead** | Their projects, no money | Plan, register and documents on their own projects |
+| **Team member** | Only projects they have work on | Their own tasks and evidence uploads |
+
+Membership comes from holding a named role on a project or having a step
+assigned to you. A register entry names a role rather than a person, so it never
+confers access on its own.
+
+**There is no authentication yet.** This is the access model, not a security
+boundary — the user menu switches who you are so each role can be demonstrated.
+Everything a real sign-in needs to plug into is already here.
+
 ## The rule the whole system exists for
 
 A step is not complete because someone ticked *Completed*. It is complete when
@@ -70,10 +115,16 @@ template**; editing a project's own copy never changes it.
 ```
 src/
   data/        templates (verbatim), reference lists, project factory, demo seed
-  lib/         dates, money, derive (flags, metrics, gates), files, Excel export
+  lib/         dates, money, files, Excel export
+               derive      flags, metrics, gates
+               permissions access roles, scoped per project
+               tasks       steps with a name on them, and what each needs next
+               alerts      everything that needs someone, worked out from state
+               calendar    every dated record, in one place
   store/       AppStore — one reducer over the whole domain
   components/  ui primitives, layout, charts, document handling
-  pages/       portfolio, projects, wizard, documents, reports, settings
+  pages/       portfolio, tasks, calendar, projects, wizard, documents,
+               reports, settings
     project/   the six workspace tabs
 ```
 
@@ -142,3 +193,5 @@ desktop, and become a card list with a full-field editor on a phone.
 - The four demo projects produce two *On track* and two *At risk*, and no
   *Behind schedule* — that category is real and reachable, but the four
   scenarios the brief specifies do not happen to include one.
+- Alerts appear in the app. Sending them anywhere — email, a daily digest, a
+  push — needs a back end, and is the natural next step once one exists.

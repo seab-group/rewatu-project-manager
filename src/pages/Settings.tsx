@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ListChecks, Plus, Send, Trash2, UserPlus, Users } from 'lucide-react';
+import { ListChecks, Plus, Send, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react';
 import { useApp } from '@/store/AppStore';
 import { PageHeader } from '@/components/layout/AppShell';
 import {
@@ -13,14 +13,15 @@ import {
   DOC_STATUS, DOC_TYPE, INVOICE_STATUS, PHASES, PRIORITY, RESPONSIBLE, STATUS,
   STORAGE_LOCATION, SUBMISSION_STATUS, YES_NO,
 } from '@/data/reference';
-import type { Person, Responsible } from '@/types';
+import type { AccessRole, Person, Responsible } from '@/types';
+import { ACCESS_ROLES, ROLE_DESCRIPTION, canManagePeople } from '@/lib/permissions';
 import { uid } from '@/data/factory';
 import { useInitialLoad } from '@/lib/useLoading';
 
 type Tab = 'people' | 'templates' | 'lists';
 
 export default function Settings() {
-  const { state, dispatch, toast } = useApp();
+  const { state, dispatch, toast, currentUser } = useApp();
   const loading = useInitialLoad();
   const [tab, setTab] = useState<Tab>('people');
   const [adding, setAdding] = useState(false);
@@ -51,7 +52,26 @@ export default function Settings() {
         </div>
       ),
     },
-    { key: 'role', header: 'Role', mobile: 'meta', width: '200px', sortValue: (p) => p.role, cell: (p) => <Pill tone="neutral" size="sm">{p.role}</Pill> },
+    { key: 'role', header: 'Job role', mobile: 'meta', width: '175px', sortValue: (p) => p.role, cell: (p) => <Pill tone="neutral" size="sm">{p.role}</Pill> },
+    {
+      key: 'access', header: 'Access', mobile: 'field', width: '190px', sortValue: (p) => p.accessRole,
+      cell: (p) => canManagePeople(currentUser) ? (
+        <div onClick={(e) => e.stopPropagation()}>
+          <label className="sr-only" htmlFor={`acc-${p.id}`}>Access role for {p.name}</label>
+          <select
+            id={`acc-${p.id}`}
+            value={p.accessRole}
+            onChange={(e) => {
+              dispatch({ type: 'person/update', id: p.id, patch: { accessRole: e.target.value as AccessRole } });
+              toast({ tone: 'success', title: `${p.name} is now a ${e.target.value}` });
+            }}
+            className="h-8 w-full cursor-pointer rounded-lg border border-line bg-surface px-2 text-[12.5px] font-semibold text-indigo hover:border-[#CFD8E1]"
+          >
+            {ACCESS_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+      ) : <Pill tone="neutral" size="sm">{p.accessRole}</Pill>,
+    },
     {
       key: 'projects', header: 'On projects', mobile: 'field', width: '130px',
       cell: (p) => {
@@ -65,12 +85,12 @@ export default function Settings() {
     },
     {
       key: 'actions', header: '', mobile: 'field', width: '160px',
-      cell: (p) => (
+      cell: (p) => canManagePeople(currentUser) ? (
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           <Button size="sm" variant="ghost" onClick={() => setToggling(p)}>{p.active ? 'Deactivate' : 'Reactivate'}</Button>
           <IconButton label={`Delete ${p.name}`} icon={Trash2} size="sm" onClick={() => setDeleting(p)} className="hover:bg-danger-bg hover:text-danger" />
         </div>
-      ),
+      ) : null,
     },
   ];
 
@@ -79,7 +99,9 @@ export default function Settings() {
       <PageHeader
         title="Settings"
         subtitle="People and roles, the standard template every project is created from, and the controlled lists behind every drop-down."
-        action={tab === 'people' ? <Button variant="primary" icon={UserPlus} onClick={() => setAdding(true)}>Add a person</Button> : undefined}
+        action={tab === 'people' && canManagePeople(currentUser)
+          ? <Button variant="primary" icon={UserPlus} onClick={() => setAdding(true)}>Add a person</Button>
+          : undefined}
       />
 
       <div className="mb-5">
@@ -96,12 +118,43 @@ export default function Settings() {
       </div>
 
       {tab === 'people' ? (
-        <Card>
-          <CardHeader title="People and roles" subtitle={`${state.people.filter((p) => p.active).length} active of ${state.people.length}.`} />
-          <CardBody className="pt-4">
-            <DataTable caption="People and their roles" columns={columns} rows={state.people} rowKey={(p) => p.id} />
-          </CardBody>
-        </Card>
+        <div className="space-y-5">
+          {!canManagePeople(currentUser) ? (
+            <InlineMessage tone="neutral" icon={ShieldCheck} title="You are viewing this list">
+              Only a director can add people or change what someone may see. You are signed in as a {currentUser.accessRole.toLowerCase()}.
+            </InlineMessage>
+          ) : null}
+
+          <Card>
+            <CardHeader title="People" subtitle={`${state.people.filter((p) => p.active).length} active of ${state.people.length}. Job role drives the responsible-party lists; access decides what they may see and change.`} />
+            <CardBody className="pt-4">
+              <DataTable caption="People, their job roles and their access" columns={columns} rows={state.people} rowKey={(p) => p.id} />
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title="What each access role may do" subtitle="Access is always scoped to the projects someone is actually on." />
+            <CardBody className="pt-4">
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {ACCESS_ROLES.map((r) => (
+                  <li key={r} className="rounded-xl border border-line p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[13.5px] font-semibold text-indigo">{r}</p>
+                      <Pill tone="neutral" size="sm">
+                        {state.people.filter((p) => p.accessRole === r).length} people
+                      </Pill>
+                    </div>
+                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-muted">{ROLE_DESCRIPTION[r]}</p>
+                  </li>
+                ))}
+              </ul>
+              <InlineMessage tone="warning" className="mt-4" icon={ShieldCheck} title="No sign-in yet">
+                This is the access model, not a security boundary. Until authentication is added, anyone can
+                switch role from the user menu — which is how you demonstrate it.
+              </InlineMessage>
+            </CardBody>
+          </Card>
+        </div>
       ) : null}
 
       {tab === 'templates' ? (
@@ -262,6 +315,7 @@ function AddPersonDialog({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Responsible>('Project manager');
+  const [accessRole, setAccessRole] = useState<AccessRole>('Team member');
   const [active, setActive] = useState(true);
 
   const errors: Record<string, string> = {};
@@ -287,8 +341,8 @@ function AddPersonDialog({
             disabled={!valid}
             onClick={() => {
               if (!valid) return;
-              onSave({ id: uid('u'), name: name.trim(), email: email.trim(), role, active });
-              setName(''); setEmail(''); setRole('Project manager'); setActive(true);
+              onSave({ id: uid('u'), name: name.trim(), email: email.trim(), role, accessRole, active });
+              setName(''); setEmail(''); setRole('Project manager'); setAccessRole('Team member'); setActive(true);
             }}
           >
             Add person
@@ -303,8 +357,11 @@ function AddPersonDialog({
         <Field label="Email address" required error={errors.email} htmlFor="p-email">
           <TextInput id="p-email" type="email" value={email} invalid={!!errors.email} onChange={(e) => setEmail(e.target.value)} placeholder="name@rewatu.co.za" />
         </Field>
-        <Field label="Role" htmlFor="p-role">
+        <Field label="Job role" htmlFor="p-role" hint="Drives the responsible-party drop-downs on the delivery plan.">
           <Select id="p-role" options={RESPONSIBLE} value={role} onChange={(e) => setRole(e.target.value as Responsible)} />
+        </Field>
+        <Field label="Access" htmlFor="p-access" hint={ROLE_DESCRIPTION[accessRole]}>
+          <Select id="p-access" options={ACCESS_ROLES} value={accessRole} onChange={(e) => setAccessRole(e.target.value as AccessRole)} />
         </Field>
         <Toggle checked={active} onChange={setActive} label="Active" description="Inactive people stay on past work but drop out of the drop-downs." />
       </div>

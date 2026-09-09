@@ -11,15 +11,17 @@ import { AttentionTable } from '@/pages/PortfolioDashboard';
 import { Donut } from '@/components/charts/Charts';
 import { CHART } from '@/components/charts/theme';
 import { attentionList, phaseProgress, projectMetrics, stepFlag } from '@/lib/derive';
+import { abilities } from '@/lib/permissions';
 import { formatZAR } from '@/lib/money';
 import { formatDate } from '@/lib/dates';
 import { PHASES } from '@/data/reference';
 
 export default function ProjectDashboard() {
   const { projectId } = useParams();
-  const { state } = useApp();
+  const { state, currentUser } = useApp();
   const navigate = useNavigate();
   const data = useProject(projectId);
+  const can = abilities(state, currentUser, data?.project ?? null);
 
   const m = useMemo(() => (data ? projectMetrics(state, data.project) : null), [state, data]);
   const attention = useMemo(() => (data ? attentionList(state, data.project.id) : []), [state, data]);
@@ -113,7 +115,7 @@ export default function ProjectDashboard() {
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className={can.viewMoney ? undefined : 'hidden'}>
           <CardHeader title="Money" subtitle="VAT inclusive." action={<Wallet className="h-4 w-4 text-ink-faint" strokeWidth={2} aria-hidden />} />
           <CardBody className="pt-4">
             <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">

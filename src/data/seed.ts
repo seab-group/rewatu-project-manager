@@ -1,5 +1,5 @@
 import type {
-  AppState, DeliveryStep, DocumentRecord, Invoice, MonthlyReport, Notification,
+  AppState, DeliveryStep, DocumentRecord, Invoice, MonthlyReport,
   Person, Project, RegisterEntry,
 } from '@/types';
 import { instantiateDeliveryPlan, instantiateRegister, scheduleRegister, scheduleSteps } from '@/data/factory';
@@ -16,17 +16,17 @@ function makeRandom(seed: number) {
 }
 
 export const PEOPLE: Person[] = [
-  { id: 'u1', name: 'Lebogang Makhura', email: 'lebogang@rewatu.co.za', role: 'Project manager', active: true },
-  { id: 'u2', name: 'Nkululeko Xulu', email: 'nkululeko@rewatu.co.za', role: 'Project lead', active: true },
-  { id: 'u3', name: 'Thandiwe Mokoena', email: 'thandiwe@rewatu.co.za', role: 'Business analyst', active: true },
-  { id: 'u4', name: 'Sipho Dlamini', email: 'sipho@rewatu.co.za', role: 'Front-end developer', active: true },
-  { id: 'u5', name: 'Reyhana Patel', email: 'reyhana@rewatu.co.za', role: 'Back-end developer', active: true },
-  { id: 'u6', name: 'Kagiso Sithole', email: 'kagiso@rewatu.co.za', role: 'Tester / QA', active: true },
-  { id: 'u7', name: 'Aneline du Toit', email: 'aneline@rewatu.co.za', role: 'Trainer', active: true },
-  { id: 'u8', name: 'Musa Ndlovu', email: 'musa@rewatu.co.za', role: 'Director', active: true },
-  { id: 'u9', name: 'Zanele Mabaso', email: 'zanele@rewatu.co.za', role: 'Project manager', active: true },
-  { id: 'u10', name: 'Farhaan Ismail', email: 'farhaan@rewatu.co.za', role: 'Project lead', active: true },
-  { id: 'u11', name: 'Palesa Motaung', email: 'palesa@rewatu.co.za', role: 'Designer', active: true },
+  { id: 'u1', name: 'Lebogang Makhura', email: 'lebogang@rewatu.co.za', role: 'Project manager', accessRole: 'Project manager', active: true },
+  { id: 'u2', name: 'Nkululeko Xulu', email: 'nkululeko@rewatu.co.za', role: 'Project lead', accessRole: 'Project lead', active: true },
+  { id: 'u3', name: 'Thandiwe Mokoena', email: 'thandiwe@rewatu.co.za', role: 'Business analyst', accessRole: 'Team member', active: true },
+  { id: 'u4', name: 'Sipho Dlamini', email: 'sipho@rewatu.co.za', role: 'Front-end developer', accessRole: 'Team member', active: true },
+  { id: 'u5', name: 'Reyhana Patel', email: 'reyhana@rewatu.co.za', role: 'Back-end developer', accessRole: 'Team member', active: true },
+  { id: 'u6', name: 'Kagiso Sithole', email: 'kagiso@rewatu.co.za', role: 'Tester / QA', accessRole: 'Team member', active: true },
+  { id: 'u7', name: 'Aneline du Toit', email: 'aneline@rewatu.co.za', role: 'Trainer', accessRole: 'Team member', active: true },
+  { id: 'u8', name: 'Musa Ndlovu', email: 'musa@rewatu.co.za', role: 'Director', accessRole: 'Director', active: true },
+  { id: 'u9', name: 'Zanele Mabaso', email: 'zanele@rewatu.co.za', role: 'Project manager', accessRole: 'Project manager', active: true },
+  { id: 'u10', name: 'Farhaan Ismail', email: 'farhaan@rewatu.co.za', role: 'Project lead', accessRole: 'Project lead', active: true },
+  { id: 'u11', name: 'Palesa Motaung', email: 'palesa@rewatu.co.za', role: 'Designer', accessRole: 'Team member', active: true },
 ];
 
 interface Scenario {
@@ -37,6 +37,11 @@ interface Scenario {
   registerOverrides: Record<number, Partial<RegisterEntry>>;
   /** Completed step indexes deliberately left without an evidence file. */
   missingEvidence: number[];
+  /**
+   * Who does each responsible role on this project. The project's own manager
+   * and lead are filled in automatically; this covers everyone else.
+   */
+  team: Partial<Record<string, string>>;
   /**
    * A re-baselined tail. Where a project has slipped, the PM re-plans the
    * remaining work rather than leaving forty rows sitting overdue — so the
@@ -102,6 +107,10 @@ const P1: Scenario = {
   }),
   completedThrough: 36,
   missingEvidence: [],
+  team: {
+    Director: 'u8', 'Business analyst': 'u3', 'Front-end developer': 'u4',
+    'Back-end developer': 'u5', 'Tester / QA': 'u6', Trainer: 'u7',
+  },
   deliveryEnd: '2026-12-15',
   stepOverrides: {
     // 8.3 Update the technical design document — submitted, not yet acknowledged.
@@ -163,6 +172,10 @@ const P2: Scenario = {
   }),
   completedThrough: 13,
   missingEvidence: [],
+  team: {
+    Director: 'u8', 'Business analyst': 'u3', 'Front-end developer': 'u4',
+    'Back-end developer': 'u5', 'Tester / QA': 'u6', Trainer: 'u7',
+  },
   deliveryEnd: '2027-01-31',
   stepOverrides: {
     14: {
@@ -213,6 +226,10 @@ const P3: Scenario = {
   }),
   completedThrough: 52,
   missingEvidence: [],
+  team: {
+    Director: 'u8', 'Business analyst': 'u3', 'Front-end developer': 'u4',
+    'Back-end developer': 'u5', 'Tester / QA': 'u6', Trainer: 'u7',
+  },
   deliveryEnd: '2026-01-31',
   stepOverrides: {
     53: {
@@ -272,6 +289,10 @@ const P4: Scenario = {
     createdAt: '2025-11-10T08:30:00Z',
   }),
   completedThrough: 21,
+  team: {
+    Director: 'u8', 'Business analyst': 'u3', 'Front-end developer': 'u11',
+    'Back-end developer': 'u5', 'Tester / QA': 'u6', Trainer: 'u7',
+  },
   // 10 and 11 (client demo notes, change register) were ticked off with nothing filed.
   missingEvidence: [20, 21],
   deliveryEnd: '2026-08-31',
@@ -373,7 +394,19 @@ export function buildInitialState(): AppState {
       planSteps = scheduleSteps(seeded, p.startDate, p.contractedCompletion);
     }
 
-    // 2. Close out everything delivered so far.
+    // 2. Put a name on every step. Work with no name on it is work nobody is
+    //    doing, so the project's roster turns each responsible role into a person.
+    const roster: Record<string, string> = {
+      ...scenario.team,
+      'Project manager': p.projectManagerId,
+      'Project lead': p.projectLeadId,
+    };
+    planSteps = planSteps.map((s) => ({
+      ...s,
+      assigneeId: roster[s.responsible] ?? p.projectManagerId,
+    }));
+
+    // 3. Close out everything delivered so far.
     planSteps = planSteps.map((s, i) => {
       if (i > scenario.completedThrough) return s;
       const slip = Math.round(rand() * 6) - 2; // a little early, a little late
@@ -387,25 +420,24 @@ export function buildInitialState(): AppState {
         submission: required ? 'Acknowledged' : 'Not required',
         dateSubmitted: required ? actual : '',
         acknowledged: required ? 'Yes' : 'Not applicable',
-        assigneeId: PEOPLE.find((x) => x.role === s.responsible)?.id ?? null,
       };
     });
 
-    // 3. Re-baseline the tail where the scenario says the plan was re-planned.
+    // 4. Re-baseline the tail where the scenario says the plan was re-planned.
     if (scenario.rebaseline) {
       const { index, from, to } = scenario.rebaseline;
       const tail = scheduleSteps(planSteps.slice(index), from, to);
       planSteps = [...planSteps.slice(0, index), ...tail];
     }
 
-    // 4. Apply the scenario's specific state.
+    // 5. Apply the scenario's specific state.
     planSteps = planSteps.map((s, i) => {
       const o = scenario.stepOverrides[i];
       return o ? { ...s, ...o } : s;
     });
     steps.push(...planSteps);
 
-    // 5. Register: acknowledged where the phase is closed out, then overridden.
+    // 6. Register: acknowledged where the phase is closed out, then overridden.
     let entries = scheduleRegister(instantiateRegister(p.id, p.id), planSteps);
     entries = entries.map((e, i) => {
       const phaseName = PHASES.find((ph) => ph.startsWith(`${e.phase} `))!;
@@ -428,7 +460,7 @@ export function buildInitialState(): AppState {
     });
     registerEntries.push(...entries);
 
-    // 6. Evidence files for everything delivered, bar what the scenario withholds.
+    // 7. Evidence files for everything delivered, bar what the scenario withholds.
     for (const s of planSteps) {
       if (s.status !== 'Completed') continue;
       if (s.submission === 'Not required') continue;
@@ -460,7 +492,7 @@ export function buildInitialState(): AppState {
       });
     }
 
-    // 7. The register's own files, for anything that has actually left the building.
+    // 8. The register's own files, for anything that has actually left the building.
     for (const e of entries) {
       if (e.status === 'Not started' || e.status === 'Not applicable') continue;
       if (e.status === 'Prepared') continue;
@@ -486,7 +518,7 @@ export function buildInitialState(): AppState {
       });
     }
 
-    // 8. The signed contract, filed against every project.
+    // 9. The signed contract, filed against every project.
     docSeq += 1;
     documents.push({
       id: `doc-${docSeq}`,
@@ -502,7 +534,7 @@ export function buildInitialState(): AppState {
       }],
     });
 
-    // 9. Invoices, each with the progress report the client insists on.
+    // 10. Invoices, each with the progress report the client insists on.
     scenario.invoices.forEach((inv, i) => {
       const id = `${p.id}-inv${i}`;
       invoices.push({ ...inv, id, projectId: p.id });
@@ -541,14 +573,6 @@ export function buildInitialState(): AppState {
     });
   }
 
-  const notifications: Notification[] = [
-    { id: 'n1', title: 'Step 8.4 is overdue', body: 'Vulindlela: “Build the back end” passed its planned end 12 days ago.', projectId: 'p1', createdAt: `${addDays(NOW, -1)}T07:10:00Z`, read: false, tone: 'danger' },
-    { id: 'n2', title: 'Appendix B returned for correction', body: 'Sizani: the directorate returned the tech stack form. Licence costs were not itemised.', projectId: 'p4', createdAt: `${addDays(NOW, -2)}T15:40:00Z`, read: false, tone: 'danger' },
-    { id: 'n3', title: 'Two submissions awaiting acknowledgement', body: 'Vulindlela: the updated technical design and the security draft are with the client.', projectId: 'p1', createdAt: `${addDays(NOW, -3)}T09:25:00Z`, read: false, tone: 'warning' },
-    { id: 'n4', title: 'Departmental workbook is 19 days old', body: 'Sizani: the client’s project plan workbook has not been updated since 21 August.', projectId: 'p4', createdAt: `${addDays(NOW, -1)}T06:00:00Z`, read: false, tone: 'warning' },
-    { id: 'n5', title: 'INV-2026-058 queried', body: 'Sizani: the department has queried the June–July invoice.', projectId: 'p4', createdAt: `${addDays(NOW, -6)}T11:00:00Z`, read: true, tone: 'warning' },
-  ];
-
   return {
     people: PEOPLE,
     projects,
@@ -558,6 +582,6 @@ export function buildInitialState(): AppState {
     invoices,
     monthlyReports,
     currentUserId: 'u1',
-    notifications,
+    readAlertIds: [],
   };
 }

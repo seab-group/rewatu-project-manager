@@ -1,27 +1,43 @@
 import { NavLink, Navigate, Outlet, useParams } from 'react-router-dom';
-import { ChevronRight, FileText, Info, LayoutDashboard, ListChecks, PieChart, Send, Settings2 } from 'lucide-react';
+import { ChevronRight, FileText, Info, LayoutDashboard, ListChecks, Lock, PieChart, Send, Settings2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useApp, useProject } from '@/store/AppStore';
 import { Card, cx, EmptyState, Pill } from '@/components/ui/primitives';
 import { HealthPill } from '@/components/ui/StatusPills';
 import { ProjectSwitcher } from '@/components/layout/TopBar';
 import { projectMetrics } from '@/lib/derive';
+import { abilities, canSeeProject } from '@/lib/permissions';
 import { formatZAR } from '@/lib/money';
 import { formatDate } from '@/lib/dates';
 
 const TABS = [
-  { to: '.', end: true, label: 'Dashboard', icon: LayoutDashboard },
-  { to: 'setup', end: false, label: 'Setup', icon: Settings2 },
-  { to: 'plan', end: false, label: 'Delivery Plan', icon: ListChecks },
-  { to: 'submissions', end: false, label: 'Submissions Register', icon: Send },
-  { to: 'documents', end: false, label: 'Documents', icon: FileText },
-  { to: 'reports', end: false, label: 'Reports', icon: PieChart },
+  { to: '.', end: true, label: 'Dashboard', icon: LayoutDashboard, money: false },
+  { to: 'setup', end: false, label: 'Setup', icon: Settings2, money: false },
+  { to: 'plan', end: false, label: 'Delivery Plan', icon: ListChecks, money: false },
+  { to: 'submissions', end: false, label: 'Submissions Register', icon: Send, money: false },
+  { to: 'documents', end: false, label: 'Documents', icon: FileText, money: false },
+  // Invoices and the monthly reporting position.
+  { to: 'reports', end: false, label: 'Reports', icon: PieChart, money: true },
 ];
 
 export default function ProjectWorkspace() {
   const { projectId } = useParams();
-  const { state } = useApp();
+  const { state, currentUser } = useApp();
   const data = useProject(projectId);
+
+  // Being on a project is what grants access to it.
+  if (data && !canSeeProject(state, currentUser, data.project)) {
+    return (
+      <Card>
+        <EmptyState
+          icon={Lock}
+          title="You are not on this project"
+          body={`${data.project.name} is not one of yours. A director or its project manager can add you to it by putting your name on a delivery plan step.`}
+          action={<Link to="/projects" className="text-sm font-semibold text-cyan-link hover:underline">Back to projects</Link>}
+        />
+      </Card>
+    );
+  }
 
   if (!data) {
     return (
@@ -37,6 +53,8 @@ export default function ProjectWorkspace() {
 
   const m = projectMetrics(state, data.project);
   const pm = state.people.find((p) => p.id === data.project.projectManagerId);
+  const can = abilities(state, currentUser, data.project);
+  const tabs = TABS.filter((t) => !t.money || can.viewMoney);
 
   return (
     <>
@@ -63,7 +81,9 @@ export default function ProjectWorkspace() {
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           <div className="lg:hidden"><ProjectSwitcher /></div>
           <Pill tone="neutral">{m.phaseReached}</Pill>
-          <Pill tone="neutral">{formatZAR(data.project.contractValue, { decimals: false })}</Pill>
+          {can.viewMoney ? (
+            <Pill tone="neutral">{formatZAR(data.project.contractValue, { decimals: false })}</Pill>
+          ) : null}
           <Pill tone={m.time.daysRemaining !== null && m.time.daysRemaining < 60 ? 'warning' : 'neutral'}>
             {m.time.daysRemaining !== null && m.time.daysRemaining >= 0
               ? `${m.time.daysRemaining} days remaining`
@@ -74,7 +94,7 @@ export default function ProjectWorkspace() {
 
       <div className="mb-5 border-b border-line">
         <nav aria-label="Project sections" className="rw-scroll -mb-px flex gap-1 overflow-x-auto">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <NavLink
               key={t.label}
               to={t.to}

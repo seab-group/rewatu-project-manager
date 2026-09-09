@@ -2,6 +2,8 @@ import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router
 import { AppProvider } from '@/store/AppStore';
 import { AppShell } from '@/components/layout/AppShell';
 import PortfolioDashboard from '@/pages/PortfolioDashboard';
+import MyTasks from '@/pages/MyTasks';
+import CalendarPage from '@/pages/CalendarPage';
 import ProjectsList from '@/pages/ProjectsList';
 import NewProjectWizard from '@/pages/NewProjectWizard';
 import DocumentsGlobal from '@/pages/DocumentsGlobal';
@@ -29,6 +31,8 @@ export default function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route index element={<PortfolioDashboard />} />
+            <Route path="tasks" element={<MyTasks />} />
+            <Route path="calendar" element={<CalendarPage />} />
             <Route path="projects" element={<ProjectsList />} />
             <Route path="projects/new" element={<NewProjectWizard />} />
             <Route path="projects/:projectId" element={<ProjectWorkspace />}>

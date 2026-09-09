@@ -3,6 +3,7 @@ import type {
   AppState, DeliveryStep, DocumentRecord, DocumentVersion, Invoice, MonthlyReport,
   Person, Project, RegisterEntry,
 } from '@/types';
+import { alertsFor, type Alert } from '@/lib/alerts';
 import { buildInitialState } from '@/data/seed';
 import { instantiateDeliveryPlan, instantiateRegister, scheduleRegister, scheduleSteps, uid } from '@/data/factory';
 
@@ -31,8 +32,9 @@ type Action =
   | { type: 'person/add'; person: Person }
   | { type: 'person/update'; id: string; patch: Partial<Person> }
   | { type: 'person/delete'; id: string }
-  | { type: 'notify/readAll' }
-  | { type: 'notify/read'; id: string };
+  | { type: 'alerts/read'; ids: string[] }
+  | { type: 'alerts/readAll'; ids: string[] }
+  | { type: 'user/switch'; id: string };
 
 /** Rewrite `order` so the Ref column is a clean 1..n sequence again. */
 function renumber(steps: DeliveryStep[], projectId: string): DeliveryStep[] {
@@ -217,13 +219,11 @@ function reducer(state: AppState, action: Action): AppState {
     case 'person/delete':
       return { ...state, people: state.people.filter((p) => p.id !== action.id) };
 
-    case 'notify/readAll':
-      return { ...state, notifications: state.notifications.map((n) => ({ ...n, read: true })) };
-    case 'notify/read':
-      return {
-        ...state,
-        notifications: state.notifications.map((n) => (n.id === action.id ? { ...n, read: true } : n)),
-      };
+    case 'alerts/read':
+    case 'alerts/readAll':
+      return { ...state, readAlertIds: [...new Set([...state.readAlertIds, ...action.ids])] };
+    case 'user/switch':
+      return { ...state, currentUserId: action.id };
     default:
       return state;
   }
@@ -243,6 +243,9 @@ interface Ctx {
   toast: (t: Omit<Toast, 'id'>) => void;
   dismissToast: (id: string) => void;
   currentUser: Person;
+  /** Alerts for the current user, derived fresh from state on every change. */
+  alerts: Alert[];
+  unreadAlerts: number;
 }
 
 const AppContext = createContext<Ctx | null>(null);
@@ -266,9 +269,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [state.people, state.currentUserId],
   );
 
+  const alerts = useMemo(() => alertsFor(state, currentUser), [state, currentUser]);
+  const read = useMemo(() => new Set(state.readAlertIds), [state.readAlertIds]);
+  const unreadAlerts = useMemo(
+    () => alerts.filter((a) => !read.has(a.id)).length,
+    [alerts, read],
+  );
+
   const value = useMemo(
-    () => ({ state, dispatch, toasts, toast, dismissToast, currentUser }),
-    [state, toasts, toast, dismissToast, currentUser],
+    () => ({ state, dispatch, toasts, toast, dismissToast, currentUser, alerts, unreadAlerts }),
+    [state, toasts, toast, dismissToast, currentUser, alerts, unreadAlerts],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

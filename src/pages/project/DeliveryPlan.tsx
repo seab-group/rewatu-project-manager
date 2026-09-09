@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Copy, CornerDownLeft,
+  AlertTriangle, ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Copy, CornerDownLeft, Eye,
   CornerDownRight, Download, ExternalLink, FileUp, Filter, GripVertical, ListChecks, MoreVertical,
   Paperclip, Pencil, Plus, Search, Trash2, X,
 } from 'lucide-react';
@@ -21,6 +21,7 @@ import type { DeliveryStep, DocumentRecord, Person, Responsible } from '@/types'
 import { daysLate, stepDays, stepFlag } from '@/lib/derive';
 import { formatDate, isValidISO } from '@/lib/dates';
 import { downloadWorkbook, safeFileName } from '@/lib/export';
+import { abilities } from '@/lib/permissions';
 import { PLAN_COLUMNS, describeAcknowledgement, describeStatusChange, planSheet, type PendingChange } from '@/pages/project/planHelpers';
 
 interface Filters {
@@ -31,7 +32,7 @@ const NO_FILTERS: Filters = { q: '', phase: '', status: '', flag: '', responsibl
 export default function DeliveryPlan() {
   const { projectId } = useParams();
   const [params, setParams] = useSearchParams();
-  const { state, dispatch, toast } = useApp();
+  const { state, dispatch, toast, currentUser } = useApp();
   const data = useProject(projectId);
 
   const [filters, setFilters] = useState<Filters>({ ...NO_FILTERS, phase: params.get('phase') ?? '' });
@@ -46,6 +47,7 @@ export default function DeliveryPlan() {
 
   const steps = data?.steps ?? [];
   const docs = data?.documents ?? [];
+  const can = abilities(state, currentUser, data?.project ?? null);
 
   const filtered = useMemo(() => {
     const term = filters.q.trim().toLowerCase();
@@ -197,6 +199,15 @@ export default function DeliveryPlan() {
     <>
       <ProjectManagerReminder />
 
+      {!can.editPlan ? (
+        <InlineMessage tone="neutral" className="mb-5" icon={Eye} title="You are reading this plan">
+          Only the project manager, the project lead or a director may change it. The steps assigned to
+          you are on{' '}
+          <Link to="/tasks" className="font-semibold text-cyan-link hover:underline">My tasks</Link>, where
+          you can work them and upload evidence.
+        </InlineMessage>
+      ) : null}
+
       {/* Toolbar */}
       <Card className="mb-5">
         <CardBody className="space-y-3 py-4">
@@ -225,13 +236,15 @@ export default function DeliveryPlan() {
               >
                 {collapsed.size === groups.length ? 'Expand all' : 'Collapse all'}
               </Button>
-              <Button
-                variant="primary"
-                icon={Plus}
-                onClick={() => dispatch({ type: 'step/insert', projectId: data.project.id, afterId: null, phase: filters.phase || PHASES[0] })}
-              >
-                Add step
-              </Button>
+              {can.editPlan ? (
+                <Button
+                  variant="primary"
+                  icon={Plus}
+                  onClick={() => dispatch({ type: 'step/insert', projectId: data.project.id, afterId: null, phase: filters.phase || PHASES[0] })}
+                >
+                  Add step
+                </Button>
+              ) : null}
             </div>
           </div>
 
@@ -326,18 +339,20 @@ export default function DeliveryPlan() {
                       label={`${g.phase}: ${pctDone}% complete`}
                     />
                     <span className="w-9 shrink-0 text-right text-[12.5px] font-semibold tabular-nums text-indigo">{pctDone}%</span>
-                    <Button
-                      size="sm"
-                      icon={Plus}
-                      onClick={() => dispatch({
-                        type: 'step/insert',
-                        projectId: data.project.id,
-                        afterId: g.all[g.all.length - 1]?.id ?? null,
-                        phase: g.phase,
-                      })}
-                    >
-                      <span className="hidden sm:inline">Add step</span>
-                    </Button>
+                    {can.editPlan ? (
+                      <Button
+                        size="sm"
+                        icon={Plus}
+                        onClick={() => dispatch({
+                          type: 'step/insert',
+                          projectId: data.project.id,
+                          afterId: g.all[g.all.length - 1]?.id ?? null,
+                          phase: g.phase,
+                        })}
+                      >
+                        <span className="hidden sm:inline">Add step</span>
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
 
@@ -405,6 +420,7 @@ export default function DeliveryPlan() {
                                 phase: s.phase,
                               })}
                               onMove={(d) => move(s, d)}
+                              canEdit={can.editPlan}
                               onDragStart={() => { dragged.current = { id: s.id, phase: g.phase }; }}
                               onDropOn={() => onDrop(s.id, g.phase)}
                             />
@@ -597,6 +613,7 @@ interface RowProps {
   onDuplicate: () => void;
   onInsert: (where: 'above' | 'below') => void;
   onMove: (d: -1 | 1) => void;
+  canEdit: boolean;
   onDragStart: () => void;
   onDropOn: () => void;
 }
@@ -604,7 +621,7 @@ interface RowProps {
 function StepRow(props: RowProps) {
   const {
     step: s, refNo, docs, people, selected, onSelect, onPatch, onStatus, onSubmission, onAck,
-    onUpload, onDelete, onDuplicate, onInsert, onMove, onDragStart, onDropOn,
+    onUpload, onDelete, onDuplicate, onInsert, onMove, canEdit, onDragStart, onDropOn,
   } = props;
 
   const flag = stepFlag(s);
@@ -632,7 +649,7 @@ function StepRow(props: RowProps) {
       </td>
       <td className="px-1 py-2.5 align-top">
         <span
-          draggable
+          draggable={canEdit}
           onDragStart={onDragStart}
           className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-ink-faint hover:bg-canvas hover:text-indigo active:cursor-grabbing"
           title="Drag to reorder within this phase"
@@ -781,7 +798,7 @@ function StepRow(props: RowProps) {
       </td>
 
       <td className="px-2 py-2 align-top">
-        <RowMenu
+        {canEdit ? <RowMenu
           stepLabel={s.step}
           onInsertAbove={() => onInsert('above')}
           onInsertBelow={() => onInsert('below')}
@@ -789,7 +806,7 @@ function StepRow(props: RowProps) {
           onMoveUp={() => onMove(-1)}
           onMoveDown={() => onMove(1)}
           onDelete={onDelete}
-        />
+        /> : null}
       </td>
     </tr>
   );

@@ -7,6 +7,7 @@ import { Button, Card, CardBody, CardHeader, cx, InlineMessage, Pill } from '@/c
 import { ConfirmDialog, DeleteDialog } from '@/components/ui/Modal';
 import { DateInput, Field, FieldGroup, MoneyInput, Select, TextInput } from '@/components/ui/form';
 import { formatZAR, parseAmount } from '@/lib/money';
+import { abilities } from '@/lib/permissions';
 import { daysBetween, formatDate, isValidISO, today } from '@/lib/dates';
 import type { Project } from '@/types';
 
@@ -45,13 +46,14 @@ export function workbookAge(dateStr: string): { days: number | null; tone: 'succ
 
 export default function ProjectSetup() {
   const { projectId } = useParams();
-  const { state, dispatch, toast } = useApp();
+  const { state, dispatch, toast, currentUser } = useApp();
   const navigate = useNavigate();
   const data = useProject(projectId);
 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const can = abilities(state, currentUser, data?.project ?? null);
 
   const original = useMemo(() => (data ? toDraft(data.project) : null), [data]);
   const current = draft ?? original;
@@ -241,18 +243,25 @@ export default function ProjectSetup() {
           ) : null}
         </CardBody>
 
-        <div className="flex flex-col-reverse gap-2 border-t border-line bg-canvas px-5 py-4 sm:flex-row sm:justify-end">
-          <Button variant="ghost" icon={RotateCcw} onClick={() => setDraft(null)} disabled={!dirty}>Discard changes</Button>
-          <Button variant="primary" icon={Save} onClick={() => setConfirming(true)} disabled={!dirty || !valid}>Save changes</Button>
+        <div className="flex flex-col-reverse gap-2 border-t border-line bg-canvas px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
+          {!can.editSetup ? (
+            <p className="mr-auto text-[12.5px] text-ink-muted">
+              You can read these details. Only the project manager or a director may change them.
+            </p>
+          ) : null}
+          <Button variant="ghost" icon={RotateCcw} onClick={() => setDraft(null)} disabled={!dirty || !can.editSetup}>Discard changes</Button>
+          <Button variant="primary" icon={Save} onClick={() => setConfirming(true)} disabled={!dirty || !valid || !can.editSetup}>Save changes</Button>
         </div>
       </Card>
 
-      <Card className="mt-5 border-danger/20">
-        <CardHeader title="Delete this project" subtitle="Everything filed against it goes with it." />
-        <CardBody className="pt-4">
-          <Button variant="danger" icon={Trash2} onClick={() => setDeleting(true)}>Delete project</Button>
-        </CardBody>
-      </Card>
+      {can.deleteProject ? (
+        <Card className="mt-5 border-danger/20">
+          <CardHeader title="Delete this project" subtitle="Everything filed against it goes with it." />
+          <CardBody className="pt-4">
+            <Button variant="danger" icon={Trash2} onClick={() => setDeleting(true)}>Delete project</Button>
+          </CardBody>
+        </Card>
+      ) : null}
 
       <ConfirmDialog
         open={confirming}

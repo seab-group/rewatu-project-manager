@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Bell, Check, ChevronsUpDown, FileText, FolderKanban, ListChecks, LogOut, Menu, Search, UserCog, X,
+  Bell, Check, CheckCircle2, ChevronsUpDown, FileText, FolderKanban, ListChecks, Menu, Search,
+  Settings2, UserCog, X,
 } from 'lucide-react';
 import { useApp } from '@/store/AppStore';
 import { cx, IconButton, Pill } from '@/components/ui/primitives';
-import { formatDate } from '@/lib/dates';
 
 function useOutsideClose(ref: React.RefObject<HTMLElement>, onClose: () => void, active: boolean) {
   useEffect(() => {
@@ -200,13 +200,15 @@ function GlobalSearch() {
 /* ------------------------------------------------------------------ */
 
 function Notifications() {
-  const { state, dispatch } = useApp();
+  const { alerts, state, dispatch } = useApp();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useOutsideClose(ref, () => setOpen(false), open);
 
-  const unread = state.notifications.filter((n) => !n.read).length;
+  const read = new Set(state.readAlertIds);
+  const unread = alerts.filter((a) => !read.has(a.id)).length;
+  const shown = alerts.slice(0, 30);
 
   return (
     <div className="relative" ref={ref}>
@@ -214,59 +216,90 @@ function Notifications() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications, none unread'}
+        aria-label={unread ? `Alerts, ${unread} unread` : 'Alerts, none unread'}
         className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-[#EDF1F5] hover:text-indigo"
       >
         <Bell className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
         {unread > 0 ? (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white">
-            {unread}
+            {unread > 99 ? '99+' : unread}
           </span>
         ) : null}
       </button>
       {open ? (
-        <div className="absolute right-0 top-full z-40 mt-1.5 w-[min(92vw,24rem)] overflow-hidden rounded-card border border-line bg-surface shadow-pop animate-scale-in">
+        <div className="absolute right-0 top-full z-40 mt-1.5 w-[min(94vw,26rem)] overflow-hidden rounded-card border border-line bg-surface shadow-pop animate-scale-in">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
-            <h2 className="text-[13px] font-semibold text-indigo">Notifications</h2>
+            <div>
+              <h2 className="text-[13px] font-semibold text-indigo">Alerts</h2>
+              <p className="mt-0.5 text-[11.5px] text-ink-muted">
+                Worked out from your projects, every time. Fix the thing and the alert goes.
+              </p>
+            </div>
             {unread > 0 ? (
               <button
                 type="button"
-                onClick={() => dispatch({ type: 'notify/readAll' })}
-                className="rounded text-[12px] font-semibold text-cyan-link hover:underline"
+                onClick={() => dispatch({ type: 'alerts/readAll', ids: alerts.map((a) => a.id) })}
+                className="shrink-0 rounded text-[12px] font-semibold text-cyan-link hover:underline"
               >
                 Mark all read
               </button>
             ) : null}
           </div>
-          <ul className="rw-scroll max-h-[65vh] divide-y divide-line overflow-y-auto">
-            {state.notifications.map((n) => (
-              <li key={n.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    dispatch({ type: 'notify/read', id: n.id });
-                    setOpen(false);
-                    if (n.projectId) navigate(`/projects/${n.projectId}`);
-                  }}
-                  className={cx('flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-canvas', !n.read && 'bg-cyan-50/40')}
-                >
-                  <span
-                    className={cx('mt-1.5 h-2 w-2 shrink-0 rounded-full',
-                      n.tone === 'danger' ? 'bg-danger' : n.tone === 'warning' ? 'bg-warning' : n.tone === 'success' ? 'bg-success' : 'bg-neutral')}
-                    aria-hidden
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-[13px] font-semibold text-indigo">
-                      {n.title}
-                      {!n.read ? <span className="sr-only"> (unread)</span> : null}
-                    </span>
-                    <span className="mt-0.5 block text-[12.5px] leading-relaxed text-ink-muted">{n.body}</span>
-                    <span className="mt-1 block text-[11px] text-ink-faint">{formatDate(n.createdAt.slice(0, 10))}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          {shown.length === 0 ? (
+            <div className="px-4 py-10 text-center">
+              <CheckCircle2 className="mx-auto h-7 w-7 text-success" strokeWidth={1.75} aria-hidden />
+              <p className="mt-2.5 text-[13px] font-semibold text-indigo">Nothing needs you</p>
+              <p className="mt-1 text-[12.5px] text-ink-muted">
+                No overdue work, no returned submissions, nothing waiting on a file.
+              </p>
+            </div>
+          ) : (
+            <ul className="rw-scroll max-h-[65vh] divide-y divide-line overflow-y-auto">
+              {shown.map((a) => {
+                const isRead = read.has(a.id);
+                return (
+                  <li key={a.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch({ type: 'alerts/read', ids: [a.id] });
+                        setOpen(false);
+                        navigate(a.href);
+                      }}
+                      className={cx('flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-canvas', !isRead && 'bg-cyan-50/40')}
+                    >
+                      <span
+                        className={cx('mt-1.5 h-2 w-2 shrink-0 rounded-full',
+                          a.tone === 'danger' ? 'bg-danger' : a.tone === 'warning' ? 'bg-warning' : a.tone === 'success' ? 'bg-success' : 'bg-neutral')}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="text-[13px] font-semibold text-indigo">{a.title}</span>
+                          {!isRead ? <span className="sr-only">(unread)</span> : null}
+                        </span>
+                        <span className="mt-0.5 block line-clamp-2 text-[12.5px] leading-relaxed text-ink-muted">{a.body}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-ink-faint">
+                          <span className="truncate">{a.projectName}</span>
+                          <span aria-hidden>·</span>
+                          <span>{a.kind}</span>
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="border-t border-line p-2">
+            <button
+              type="button"
+              onClick={() => { setOpen(false); navigate('/tasks'); }}
+              className="w-full rounded-lg px-3 py-2 text-[13px] font-semibold text-cyan-link transition-colors hover:bg-canvas"
+            >
+              Open my tasks
+            </button>
+          </div>
         </div>
       ) : null}
     </div>
@@ -276,13 +309,14 @@ function Notifications() {
 /* ------------------------------------------------------------------ */
 
 function UserMenu() {
-  const { currentUser } = useApp();
+  const { currentUser, state, dispatch } = useApp();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useOutsideClose(ref, () => setOpen(false), open);
 
   const initials = currentUser.name.split(' ').map((s) => s[0]).slice(0, 2).join('');
+  const people = state.people.filter((p) => p.active);
 
   return (
     <div className="relative" ref={ref}>
@@ -299,33 +333,49 @@ function UserMenu() {
         </span>
         <span className="hidden text-left lg:block">
           <span className="block text-[13px] font-semibold leading-tight text-indigo">{currentUser.name}</span>
-          <span className="block text-[11px] leading-tight text-ink-muted">{currentUser.role}</span>
+          <span className="block text-[11px] leading-tight text-ink-muted">{currentUser.accessRole}</span>
         </span>
       </button>
       {open ? (
-        <div role="menu" className="absolute right-0 top-full z-40 mt-1.5 w-60 overflow-hidden rounded-card border border-line bg-surface p-1.5 shadow-pop animate-scale-in">
+        <div role="menu" className="absolute right-0 top-full z-40 mt-1.5 w-[min(92vw,20rem)] overflow-hidden rounded-card border border-line bg-surface p-1.5 shadow-pop animate-scale-in">
           <div className="border-b border-line px-2.5 pb-2.5 pt-1.5">
             <p className="text-[13px] font-semibold text-indigo">{currentUser.name}</p>
             <p className="truncate text-[12px] text-ink-muted">{currentUser.email}</p>
-            <Pill tone="neutral" size="sm" className="mt-2">{currentUser.role}</Pill>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <Pill tone="neutral" size="sm">{currentUser.accessRole}</Pill>
+              <Pill tone="neutral" size="sm">{currentUser.role}</Pill>
+            </div>
           </div>
+
+          {/* No authentication yet, so the demo switches who you are. */}
+          <div className="border-b border-line px-2.5 py-2.5">
+            <label htmlFor="who" className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-faint">
+              <UserCog className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+              Viewing as
+            </label>
+            <select
+              id="who"
+              value={currentUser.id}
+              onChange={(e) => { dispatch({ type: 'user/switch', id: e.target.value }); setOpen(false); }}
+              className="h-9 w-full cursor-pointer rounded-lg border border-line bg-surface px-2.5 text-[13px] font-medium text-ink hover:border-[#CFD8E1]"
+            >
+              {people.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} — {p.accessRole}</option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-[11.5px] leading-snug text-ink-muted">
+              Sign-in comes later. Switching here shows what each role sees.
+            </p>
+          </div>
+
           <button
             type="button"
             role="menuitem"
             onClick={() => { setOpen(false); navigate('/settings'); }}
             className="mt-1 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:bg-canvas"
           >
-            <UserCog className="h-4 w-4 text-ink-muted" strokeWidth={2} aria-hidden />
+            <Settings2 className="h-4 w-4 text-ink-muted" strokeWidth={2} aria-hidden />
             People and settings
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:bg-canvas"
-          >
-            <LogOut className="h-4 w-4 text-ink-muted" strokeWidth={2} aria-hidden />
-            Sign out
           </button>
         </div>
       ) : null}

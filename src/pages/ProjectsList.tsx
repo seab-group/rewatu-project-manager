@@ -10,20 +10,28 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { HealthPill } from '@/components/ui/StatusPills';
 import { Select } from '@/components/ui/form';
 import { portfolioMetrics, type ProjectMetrics } from '@/lib/derive';
+import { canCreateProject, visibleProjects } from '@/lib/permissions';
 import { formatZAR } from '@/lib/money';
 import { formatDate } from '@/lib/dates';
 import { HEALTH } from '@/data/reference';
 import { useInitialLoad } from '@/lib/useLoading';
 
 export default function ProjectsList() {
-  const { state } = useApp();
+  const { state, currentUser } = useApp();
   const navigate = useNavigate();
   const loading = useInitialLoad();
   const [view, setView] = useState<'cards' | 'table'>('cards');
   const [q, setQ] = useState('');
   const [health, setHealth] = useState('');
 
-  const all = useMemo(() => portfolioMetrics(state).perProject, [state]);
+  const visibleIds = useMemo(
+    () => new Set(visibleProjects(state, currentUser).map((p) => p.id)),
+    [state, currentUser],
+  );
+  const all = useMemo(
+    () => portfolioMetrics(state).perProject.filter((m) => visibleIds.has(m.project.id)),
+    [state, visibleIds],
+  );
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
     return all.filter((m) => {
@@ -58,7 +66,9 @@ export default function ProjectsList() {
       <PageHeader
         title="Projects"
         subtitle={`${all.length} project${all.length === 1 ? '' : 's'}. Every one carries the standard delivery plan and submissions register.`}
-        action={<Button variant="primary" icon={Plus} onClick={() => navigate('/projects/new')}>New project</Button>}
+        action={canCreateProject(currentUser)
+          ? <Button variant="primary" icon={Plus} onClick={() => navigate('/projects/new')}>New project</Button>
+          : undefined}
       />
 
       <Card className="mb-5">

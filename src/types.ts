@@ -19,11 +19,21 @@ export type Flag = (typeof FLAGS)[number] | '';
 /** ISO date, `YYYY-MM-DD`. Empty string means "not set". */
 export type ISODate = string;
 
+/**
+ * What someone may do in the system, as distinct from the job they do on a
+ * project. A back-end will map these off real accounts; for now the demo lets
+ * you switch between them.
+ */
+export type AccessRole = 'Director' | 'Project manager' | 'Project lead' | 'Team member';
+
 export interface Person {
   id: string;
   name: string;
   email: string;
+  /** The job they do — drives the responsible-party lists. */
   role: Responsible;
+  /** What they are allowed to see and change. */
+  accessRole: AccessRole;
   active: boolean;
 }
 
@@ -162,16 +172,11 @@ export interface AppState {
   documents: DocumentRecord[];
   invoices: Invoice[];
   monthlyReports: MonthlyReport[];
+  /** Who is using the system. No authentication yet — this is the demo switch. */
   currentUserId: string;
-  notifications: Notification[];
-}
-
-export interface Notification {
-  id: string;
-  title: string;
-  body: string;
-  projectId: string | null;
-  createdAt: string;
-  read: boolean;
-  tone: 'danger' | 'warning' | 'success' | 'neutral';
+  /**
+   * Alerts are derived from the data on every render, never stored, so they can
+   * never go stale. Only what has been read is remembered, by alert id.
+   */
+  readAlertIds: string[];
 }

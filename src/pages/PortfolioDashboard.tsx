@@ -15,15 +15,25 @@ import { attentionList, cashPosition, phaseProgress, portfolioMetrics, type Atte
 import { formatZAR, formatZARCompact } from '@/lib/money';
 import { formatDate } from '@/lib/dates';
 import { useInitialLoad } from '@/lib/useLoading';
+import { TodayPanel } from '@/components/TodayPanel';
+import { canCreateProject, visibleProjects } from '@/lib/permissions';
 
 export default function PortfolioDashboard() {
-  const { state } = useApp();
+  const { state, currentUser } = useApp();
   const navigate = useNavigate();
   const loading = useInitialLoad();
 
-  const m = useMemo(() => portfolioMetrics(state), [state]);
-  const attention = useMemo(() => attentionList(state), [state]);
-  const activeIds = useMemo(() => new Set(state.projects.filter((p) => !p.archived).map((p) => p.id)), [state.projects]);
+  const visible = useMemo(() => visibleProjects(state, currentUser), [state, currentUser]);
+  const activeIds = useMemo(() => new Set(visible.map((p) => p.id)), [visible]);
+  const m = useMemo(() => {
+    const all = portfolioMetrics(state);
+    const perProject = all.perProject.filter((p) => activeIds.has(p.project.id));
+    return { ...all, perProject };
+  }, [state, activeIds]);
+  const attention = useMemo(
+    () => attentionList(state).filter((a) => activeIds.has(a.projectId)),
+    [state, activeIds],
+  );
   const phases = useMemo(
     () => phaseProgress(state.steps.filter((s) => activeIds.has(s.projectId))),
     [state.steps, activeIds],
@@ -50,11 +60,15 @@ export default function PortfolioDashboard() {
       <PageHeader
         title="Portfolio dashboard"
         subtitle="Every active delivery, and where the money sits. All amounts are VAT inclusive."
-        action={<Button variant="primary" icon={Plus} onClick={() => navigate('/projects/new')}>New project</Button>}
+        action={canCreateProject(currentUser)
+          ? <Button variant="primary" icon={Plus} onClick={() => navigate('/projects/new')}>New project</Button>
+          : undefined}
       />
 
+      <TodayPanel compact />
+
       {/* Health strip */}
-      <section aria-label="Portfolio health" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Portfolio health" className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label="Active projects"
           value={m.activeProjects}

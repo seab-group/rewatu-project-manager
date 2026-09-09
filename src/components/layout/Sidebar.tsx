@@ -1,22 +1,42 @@
 import { NavLink } from 'react-router-dom';
 import {
-  FileText, FolderKanban, LayoutDashboard, PanelLeftClose, PanelLeftOpen, PieChart, Settings,
+  CalendarDays, CheckSquare, FileText, FolderKanban, LayoutDashboard, PanelLeftClose,
+  PanelLeftOpen, PieChart, Settings,
 } from 'lucide-react';
 import { cx, IconButton } from '@/components/ui/primitives';
 import { LogoLockup } from '@/components/layout/Logo';
+import { useApp } from '@/store/AppStore';
+import { canSeePortfolio, canSeeReports } from '@/lib/permissions';
+import { countTasks, tasksFor } from '@/lib/tasks';
+import type { Person } from '@/types';
 
-export const NAV = [
-  { to: '/', label: 'Portfolio dashboard', short: 'Portfolio', icon: LayoutDashboard, end: true },
-  { to: '/projects', label: 'Projects', short: 'Projects', icon: FolderKanban, end: false },
-  { to: '/documents', label: 'Documents', short: 'Documents', icon: FileText, end: false },
-  { to: '/reports', label: 'Reports', short: 'Reports', icon: PieChart, end: false },
-  { to: '/settings', label: 'Settings', short: 'Settings', icon: Settings, end: false },
+interface NavItem {
+  to: string;
+  label: string;
+  icon: React.ElementType;
+  end: boolean;
+  /** Hidden entirely when this returns false. */
+  visible?: (person: Person) => boolean;
+}
+
+export const NAV: NavItem[] = [
+  { to: '/', label: 'Portfolio dashboard', icon: LayoutDashboard, end: true, visible: canSeePortfolio },
+  { to: '/tasks', label: 'My tasks', icon: CheckSquare, end: false },
+  { to: '/calendar', label: 'Calendar', icon: CalendarDays, end: false },
+  { to: '/projects', label: 'Projects', icon: FolderKanban, end: false },
+  { to: '/documents', label: 'Documents', icon: FileText, end: false },
+  { to: '/reports', label: 'Reports', icon: PieChart, end: false, visible: canSeeReports },
+  { to: '/settings', label: 'Settings', icon: Settings, end: false },
 ];
 
 export function SidebarNav({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const { state, currentUser } = useApp();
+  const openTasks = countTasks(tasksFor(state, currentUser)).open;
+  const items = NAV.filter((n) => !n.visible || n.visible(currentUser));
+
   return (
     <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Main">
-      {NAV.map(({ to, label, icon: Icon, end }) => (
+      {items.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
@@ -36,6 +56,18 @@ export function SidebarNav({ collapsed, onNavigate }: { collapsed: boolean; onNa
             <>
               <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} aria-hidden />
               {!collapsed ? <span className="truncate">{label}</span> : <span className="sr-only">{label}</span>}
+              {to === '/tasks' && openTasks > 0 ? (
+                <span
+                  className={cx(
+                    'ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-bold leading-none tabular-nums',
+                    collapsed && 'absolute right-1.5 top-1.5 ml-0',
+                    isActive ? 'bg-white/25 text-white' : 'bg-white/15 text-white',
+                  )}
+                >
+                  {openTasks}
+                  <span className="sr-only"> open tasks</span>
+                </span>
+              ) : null}
               {isActive ? <span className="sr-only">(current page)</span> : null}
             </>
           )}
