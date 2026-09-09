@@ -13,6 +13,7 @@ import { UploadDialog, type UploadTarget } from '@/components/documents/Upload';
 import { DOC_STATUS, DOC_TYPE } from '@/data/reference';
 import type { DocumentRecord } from '@/types';
 import { extensionOf, fileKindLabel, formatBytes, isPreviewable } from '@/lib/files';
+import { saveFile } from '@/lib/download';
 import { formatDate } from '@/lib/dates';
 import { submissionRequired } from '@/lib/derive';
 
@@ -93,7 +94,7 @@ export function DocumentsView({ projectId }: { projectId?: string }) {
   const invoiceFor = (d: DocumentRecord) => state.invoices.find((i) => i.id === d.invoiceId);
   const projectOf = (d: DocumentRecord) => state.projects.find((p) => p.id === d.projectId);
 
-  const download = (d: DocumentRecord) => {
+  const download = async (d: DocumentRecord) => {
     const v = d.versions[d.versions.length - 1];
     if (!v?.objectUrl) {
       toast({
@@ -103,12 +104,9 @@ export function DocumentsView({ projectId }: { projectId?: string }) {
       });
       return;
     }
-    const a = document.createElement('a');
-    a.href = v.objectUrl;
-    a.download = v.fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const blob = await fetch(v.objectUrl).then((r) => r.blob());
+    const result = await saveFile(v.fileName, blob);
+    if (!result.ok) toast({ tone: 'danger', title: 'Download not saved', body: result.reason });
   };
 
   return (

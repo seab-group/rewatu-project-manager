@@ -21,7 +21,9 @@
 }
 
 @layer base {
-  html { -webkit-text-size-adjust: 100%; }
+  /* The page paints its own ground: an artifact or embed composites over a
+     host background, and a transparent root would borrow it. */
+  html { -webkit-text-size-adjust: 100%; background-color: #F6F8FA; }
   body {
     @apply bg-canvas text-ink font-sans antialiased;
     font-feature-settings: 'cv11', 'ss01';

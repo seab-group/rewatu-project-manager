@@ -119,8 +119,8 @@ export default function SubmissionsRegister() {
     toast({ tone: 'success', title: `${entry.submission} is now ${pending.value}` });
   };
 
-  const exportRegister = () => {
-    downloadWorkbook([{
+  const exportRegister = async () => {
+    const result = await downloadWorkbook([{
       name: 'Submissions Register',
       headers: [...COLUMNS],
       widths: [6, 8, 34, 28, 22, 20, 14, 14, 15, 22, 26, 32],
@@ -134,7 +134,9 @@ export default function SubmissionsRegister() {
         e.notes,
       ]),
     }], `${safeFileName(data.project.name)}-submissions-register`);
-    toast({ tone: 'success', title: 'Submissions register exported', body: `${filtered.length} entries.` });
+    toast(result.ok
+      ? { tone: 'success', title: 'Submissions register exported', body: `${filtered.length} entries.` }
+      : { tone: 'danger', title: 'Export not saved', body: result.reason });
   };
 
   const patch = (id: string, p: Partial<RegisterEntry>) => dispatch({ type: 'register/update', id, patch: p });

@@ -27,6 +27,11 @@ export function parseAmount(s: string): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
+/** Money to the cent. Subtracting two rands otherwise leaves binary dust. */
+export function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 export function pct(part: number, whole: number): number {
   if (!whole) return 0;
   return Math.round((part / whole) * 100);

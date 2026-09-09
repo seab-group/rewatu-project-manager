@@ -152,16 +152,18 @@ export default function DeliveryPlan() {
     setBulk(null);
   };
 
-  const exportPlan = () => {
-    downloadWorkbook(
+  const exportPlan = async () => {
+    const result = await downloadWorkbook(
       [planSheet(filtered, docs, state.people, 'Delivery Plan')],
       `${safeFileName(data.project.name)}-delivery-plan`,
     );
-    toast({
-      tone: 'success',
-      title: 'Delivery plan exported',
-      body: `${filtered.length} rows, in the column order shown on screen.`,
-    });
+    toast(result.ok
+      ? {
+          tone: 'success',
+          title: 'Delivery plan exported',
+          body: `${filtered.length} rows, in the column order shown on screen.`,
+        }
+      : { tone: 'danger', title: 'Export not saved', body: result.reason });
   };
 
   const onDrop = (targetId: string, phase: string) => {

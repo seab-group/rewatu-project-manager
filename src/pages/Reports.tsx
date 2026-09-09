@@ -42,8 +42,8 @@ export default function Reports() {
 
   const projectName = (id: string) => state.projects.find((p) => p.id === id)?.name ?? '—';
 
-  const exportAll = () => {
-    downloadWorkbook([
+  const exportAll = async () => {
+    const result = await downloadWorkbook([
       {
         name: 'Portfolio position',
         headers: ['Project', 'Client', 'Health', 'Phase reached', 'Steps complete', 'Steps total', '% complete',
@@ -76,7 +76,9 @@ export default function Reports() {
         ]),
       },
     ], 'rewatu-portfolio-report');
-    toast({ tone: 'success', title: 'Report exported', body: 'Three sheets: portfolio position, invoices and monthly reports.' });
+    toast(result.ok
+      ? { tone: 'success', title: 'Report exported', body: 'Three sheets: portfolio position, invoices and monthly reports.' }
+      : { tone: 'danger', title: 'Report not saved', body: result.reason });
   };
 
   const invoiceColumns: Array<Column<Invoice>> = [

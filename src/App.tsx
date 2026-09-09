@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppProvider } from '@/store/AppStore';
 import { AppShell } from '@/components/layout/AppShell';
 import PortfolioDashboard from '@/pages/PortfolioDashboard';
@@ -15,10 +15,17 @@ import SubmissionsRegister from '@/pages/project/SubmissionsRegister';
 import ProjectDocuments from '@/pages/project/ProjectDocuments';
 import ProjectReports from '@/pages/project/ProjectReports';
 
+/**
+ * Path routing in development and behind a real server. A single-file build —
+ * one HTML document with no server to rewrite paths — uses hash routing, so a
+ * reload or a shared deep link still lands where it should.
+ */
+const Router = import.meta.env.VITE_HASH_ROUTER ? HashRouter : BrowserRouter;
+
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
+      <Router>
         <Routes>
           <Route element={<AppShell />}>
             <Route index element={<PortfolioDashboard />} />
@@ -38,7 +45,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
-      </BrowserRouter>
+      </Router>
     </AppProvider>
   );
 }

@@ -77,6 +77,12 @@ src/
     project/   the six workspace tabs
 ```
 
+Exports are real `.xlsx` workbooks, written by a dependency-free OOXML writer
+in [`src/lib/xlsx.ts`](src/lib/xlsx.ts) and saved through
+[`src/lib/download.ts`](src/lib/download.ts), which uses the host's download
+capability where one exists (the claude.ai artifact viewer) and a plain anchor
+everywhere else.
+
 `src/lib/derive.ts` is the only place business rules live. Every dashboard
 figure, pill and attention item is derived from state there rather than stored,
 so nothing can be stale relative to the underlying record.
@@ -123,6 +129,9 @@ desktop, and become a card list with a full-field editor on a phone.
 
 ## Known gaps
 
+- Nothing persists: state lives in React, so a browser reload starts from the
+  seeded demo data again. That is the brief's "in-memory state", and the store
+  is shaped so a back end can replace it without touching the interface.
 - Uploads are held in memory as object URLs and the transfer is simulated;
   seeded demo documents have no file behind them, and say so when you try to
   preview or download them.

@@ -2,7 +2,7 @@ import type {
   AppState, DeliveryStep, DocumentRecord, Flag, Health, Invoice, Project, RegisterEntry,
 } from '@/types';
 import { addDays, daysBetween, inclusiveDays, monthKey, monthRange, parseISO, today } from '@/lib/dates';
-import { pct } from '@/lib/money';
+import { pct, round2 } from '@/lib/money';
 import { PHASES } from '@/data/reference';
 
 export type Tone = 'success' | 'warning' | 'danger' | 'neutral';
@@ -268,14 +268,14 @@ export function timeMetrics(project: Project, steps: DeliveryStep[], now = today
 export function moneyMetrics(project: Project, invoices: Invoice[]): MoneyMetrics {
   const mine = invoices.filter((i) => i.projectId === project.id);
   // "Invoiced" counts everything that has left our office, queried or not.
-  const invoiced = mine.reduce((s, i) => s + i.amount, 0);
-  const paid = mine.filter((i) => i.status === 'Paid').reduce((s, i) => s + i.amount, 0);
+  const invoiced = round2(mine.reduce((s, i) => s + i.amount, 0));
+  const paid = round2(mine.filter((i) => i.status === 'Paid').reduce((s, i) => s + i.amount, 0));
   return {
     contractValue: project.contractValue,
     invoiced,
     paid,
-    outstanding: invoiced - paid,
-    stillToInvoice: Math.max(0, project.contractValue - invoiced),
+    outstanding: round2(invoiced - paid),
+    stillToInvoice: round2(Math.max(0, project.contractValue - invoiced)),
     invoicedPct: pct(invoiced, project.contractValue),
     costBudget: project.costBudget,
   };
@@ -432,8 +432,8 @@ export function cashPosition(invoices: Invoice[], months: number = 12, now = tod
     const paidInMonth = invoices
       .filter((i) => i.status === 'Paid' && monthKey(i.datePaid) === key)
       .reduce((s, i) => s + i.amount, 0);
-    invoiced += invoicedInMonth;
-    paid += paidInMonth;
+    invoiced = round2(invoiced + invoicedInMonth);
+    paid = round2(paid + paidInMonth);
     return { month: key, invoiced, paid, invoicedInMonth, paidInMonth };
   });
 }
@@ -463,7 +463,7 @@ export function forecastToInvoice(
       if (d <= 90) out.d90 += perStep;
     }
   }
-  return out;
+  return { d30: round2(out.d30), d60: round2(out.d60), d90: round2(out.d90) };
 }
 
 export interface PortfolioMetrics {
@@ -503,11 +503,11 @@ export function portfolioMetrics(state: AppState, now = today()): PortfolioMetri
     awaitingAcknowledgement: perProject.reduce((s, m) => s + m.submissions.awaiting, 0),
     documentsOutstanding: perProject.reduce((s, m) => s + m.attention.completedNoEvidence, 0),
     monthlyReportsOutstanding: monthlyReportsOutstanding(state, now).length,
-    contractValue: perProject.reduce((s, m) => s + m.money.contractValue, 0),
-    invoiced: perProject.reduce((s, m) => s + m.money.invoiced, 0),
-    paid: perProject.reduce((s, m) => s + m.money.paid, 0),
-    outstanding: perProject.reduce((s, m) => s + m.money.outstanding, 0),
-    stillToInvoice: perProject.reduce((s, m) => s + m.money.stillToInvoice, 0),
+    contractValue: round2(perProject.reduce((s, m) => s + m.money.contractValue, 0)),
+    invoiced: round2(perProject.reduce((s, m) => s + m.money.invoiced, 0)),
+    paid: round2(perProject.reduce((s, m) => s + m.money.paid, 0)),
+    outstanding: round2(perProject.reduce((s, m) => s + m.money.outstanding, 0)),
+    stillToInvoice: round2(perProject.reduce((s, m) => s + m.money.stillToInvoice, 0)),
     costBudget,
     spendAgainstBudget: budgeted.reduce((s, p) => s + (p.costToDate ?? 0), 0),
     forecast: forecastToInvoice(state, active, now),
