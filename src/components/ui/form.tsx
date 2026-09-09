@@ -1,6 +1,7 @@
 import React, { useId } from 'react';
 import { AlertCircle, ChevronDown } from 'lucide-react';
 import { cx } from '@/components/ui/primitives';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 const CONTROL =
   'w-full rounded-lg border bg-surface px-3 text-sm text-ink transition-colors ' +
@@ -82,24 +83,42 @@ export const Select = React.forwardRef<
   );
 });
 
-/** Dates only. The browser's date control rejects anything that is not a date. */
-export const DateInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(
-  function DateInput({ className, invalid, ...rest }, ref) {
-    return (
-      <input
-        ref={ref}
-        type="date"
-        className={cx(
-          CONTROL, 'h-10',
-          invalid ? 'border-danger' : 'border-line hover:border-[#CFD8E1]',
-          className,
-        )}
-        aria-invalid={invalid || undefined}
-        {...rest}
-      />
-    );
-  },
-);
+/**
+ * Dates only, drawn in the system's own language rather than the browser's.
+ * The call sites keep the shape they had: a `value`, an `onChange` carrying an
+ * event, and `min`/`max` bounds.
+ */
+export function DateInput({
+  value, onChange, min, max, invalid, id, disabled, placeholder, className, autoFocus, ...aria
+}: {
+  value?: string;
+  onChange?: (e: { target: { value: string } }) => void;
+  min?: string;
+  max?: string;
+  invalid?: boolean;
+  id?: string;
+  disabled?: boolean;
+  placeholder?: string;
+  className?: string;
+  autoFocus?: boolean;
+  'aria-label'?: string;
+}) {
+  return (
+    <DatePicker
+      id={id}
+      value={value ?? ''}
+      onChange={(v) => onChange?.({ target: { value: v } })}
+      min={min}
+      max={max}
+      invalid={invalid}
+      disabled={disabled}
+      placeholder={placeholder}
+      className={className}
+      autoFocus={autoFocus}
+      {...aria}
+    />
+  );
+}
 
 export function MoneyInput({
   value, onChange, invalid, id, ...rest

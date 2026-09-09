@@ -1,5 +1,7 @@
 import type { AppState, ISODate, Person } from '@/types';
-import { addDays, monthKey, parseISO, toISO, today } from '@/lib/dates';
+import {
+  WEEKDAY_NAMES, addDays, isWeekendDate, monthGridDates, monthKey, shiftMonthKey, today,
+} from '@/lib/dates';
 import { stepFlag, type Tone } from '@/lib/derive';
 import { canSeeProject } from '@/lib/permissions';
 
@@ -144,34 +146,20 @@ export interface CalendarDay {
 
 /** Six weeks starting Monday, so the grid never changes height month to month. */
 export function monthGrid(month: string, events: CalendarEvent[], now: ISODate = today()): CalendarDay[] {
-  const [y, m] = month.split('-').map(Number);
-  const first = new Date(y, m - 1, 1);
-  const offset = (first.getDay() + 6) % 7; // Monday-first
-  const start = new Date(y, m - 1, 1 - offset);
-
   const byDate = new Map<string, CalendarEvent[]>();
   for (const e of events) {
     const list = byDate.get(e.date);
     if (list) list.push(e); else byDate.set(e.date, [e]);
   }
-
-  return Array.from({ length: 42 }, (_, i) => {
-    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-    const date = toISO(d);
-    return {
-      date,
-      inMonth: d.getMonth() === m - 1,
-      isToday: date === now,
-      events: byDate.get(date) ?? [],
-    };
-  });
+  return monthGridDates(month).map((date) => ({
+    date,
+    inMonth: date.startsWith(month),
+    isToday: date === now,
+    events: byDate.get(date) ?? [],
+  }));
 }
 
-export function shiftMonth(month: string, by: number): string {
-  const [y, m] = month.split('-').map(Number);
-  const d = new Date(y, m - 1 + by, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
+export const shiftMonth = shiftMonthKey;
 
 /** The next `days` of events from today, for the agenda view. */
 export function upcoming(events: CalendarEvent[], days = 30, now: ISODate = today()): CalendarEvent[] {
@@ -190,11 +178,5 @@ export function groupByDate(events: CalendarEvent[]): Array<{ date: ISODate; eve
     .map(([date, list]) => ({ date, events: list }));
 }
 
-export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-export function isWeekend(date: ISODate): boolean {
-  const d = parseISO(date);
-  if (!d) return false;
-  const day = d.getDay();
-  return day === 0 || day === 6;
-}
+export const WEEKDAYS = WEEKDAY_NAMES;
+export const isWeekend = isWeekendDate;

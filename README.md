@@ -153,6 +153,26 @@ specification. Two details worth knowing:
   every pill carries a dot or icon plus its label, and every chart has a
   labelled legend.
 
+### Dates
+
+`src/components/ui/DatePicker.tsx` replaces `<input type="date">` everywhere.
+The browser's own control paints a calendar from the operating system, which
+lands in the middle of this interface looking like it came from somewhere else;
+this is the same control drawn in the system's language — card surface, cyan
+accent, line borders, the same focus ring.
+
+It stays a text field, because dates get typed far more often than clicked:
+`12/03/2026`, `12-3-26`, `12 Mar 2026`, `12 March 2026` and the ISO form all
+parse, day first. An entry that is not a date (`31/02/2026`) is refused inline
+and never half-applied. The calendar opens on click, `ArrowDown` or `Enter`;
+arrows move by day, `PageUp`/`PageDown` by month, with `Shift` by year, `Enter`
+selects and `Escape` closes and returns focus to the field. `min`/`max` bounds
+strike out the days outside them. On a phone it becomes a bottom sheet.
+
+The grid is a real `<table>` rather than ARIA roles on a flat CSS grid, so rows,
+column headers and cells carry their own semantics — axe reports zero
+violations with the picker open, in both the popover and the sheet.
+
 ### Accessibility, and where it moved the palette
 
 The brief asks for the brand palette *and* WCAG 2.1 AA. Four of the brand

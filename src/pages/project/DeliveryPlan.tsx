@@ -360,7 +360,9 @@ export default function DeliveryPlan() {
                   <>
                     {/* Desktop grid. The card holds the horizontal scroll, not the page. */}
                     <div className="rw-scroll hidden overflow-x-auto border-t border-line md:block">
-                      <table className="w-full border-collapse text-sm" style={{ minWidth: 2560 }}>
+                      {/* Fixed layout: the declared column widths are honoured
+                          rather than redistributed, so a date never clips. */}
+                      <table className="w-full table-fixed border-collapse text-sm" style={{ minWidth: 2610 }}>
                         <caption className="sr-only">{g.phase} delivery plan steps</caption>
                         <thead>
                           <tr className="border-b border-line bg-canvas/60">
@@ -551,7 +553,7 @@ export default function DeliveryPlan() {
 }
 
 const COLUMN_WIDTHS = [
-  56, 160, 76, 280, 200, 165, 165, 125, 125, 60, 130, 150, 84, 175, 130, 115, 82, 185, 230,
+  56, 160, 76, 280, 200, 165, 165, 140, 140, 60, 140, 150, 84, 175, 140, 115, 82, 185, 230,
 ];
 
 /* ------------------------------------------------------------------ */

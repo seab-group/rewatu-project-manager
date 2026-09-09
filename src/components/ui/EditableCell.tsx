@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, Pencil, X } from 'lucide-react';
 import { cx } from '@/components/ui/primitives';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 /**
  * Inline editing that never commits silently. Click or press Enter to open the
@@ -182,8 +183,6 @@ export function DateCell({
   render?: (v: string) => React.ReactNode;
 }) {
   const e = useCellEditor(value, onCommit);
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (e.editing) ref.current?.focus(); }, [e.editing]);
   const error = e.editing ? validate?.(e.buffer) ?? null : null;
 
   if (!e.editing) {
@@ -196,20 +195,15 @@ export function DateCell({
 
   return (
     <div>
-      <input
-        ref={ref}
-        type="date"
+      <DatePicker
         value={e.buffer}
+        onChange={e.setBuffer}
         min={min}
         max={max}
+        size="sm"
+        autoFocus
+        invalid={!!error}
         aria-label={label}
-        aria-invalid={!!error}
-        onChange={(ev) => e.setBuffer(ev.target.value)}
-        onKeyDown={(ev) => {
-          if (ev.key === 'Escape') { ev.preventDefault(); e.cancel(); }
-          if (ev.key === 'Enter' && !error) { ev.preventDefault(); e.commit(); }
-        }}
-        className={cx(INPUT, error && 'border-danger ring-danger/20')}
       />
       <CommitButtons onCommit={() => e.commit()} onCancel={e.cancel} disabled={!!error} error={error ?? undefined} />
     </div>

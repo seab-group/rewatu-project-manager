@@ -22,7 +22,7 @@ const COLUMNS = [
   'Planned date', 'Date submitted', 'Acknowledged on', 'Status', 'Evidence file', 'Notes',
 ] as const;
 
-const WIDTHS = [56, 78, 250, 200, 165, 150, 125, 130, 135, 175, 175, 220];
+const WIDTHS = [56, 78, 250, 200, 165, 150, 140, 140, 145, 175, 175, 220];
 
 interface Pending {
   entryId: string;
@@ -239,7 +239,7 @@ export default function SubmissionsRegister() {
                 {!isCollapsed ? (
                   <>
                     <div className="rw-scroll hidden overflow-x-auto border-t border-line md:block">
-                      <table className="w-full border-collapse text-sm" style={{ minWidth: 1780 }}>
+                      <table className="w-full table-fixed border-collapse text-sm" style={{ minWidth: 1830 }}>
                         <caption className="sr-only">{g.name} submissions</caption>
                         <thead>
                           <tr className="border-b border-line bg-canvas/60">

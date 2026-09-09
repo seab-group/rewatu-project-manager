@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/primitives';
 import { DeleteDialog, Modal } from '@/components/ui/Modal';
 import { UploadDialog, type UploadTarget } from '@/components/documents/Upload';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { DOC_STATUS, DOC_TYPE } from '@/data/reference';
 import type { DocumentRecord } from '@/types';
 import { extensionOf, fileKindLabel, formatBytes, isPreviewable } from '@/lib/files';
@@ -184,15 +185,13 @@ export function DocumentsView({ projectId }: { projectId?: string }) {
               options={DOC_TYPE.map((t) => ({ value: t, label: t }))} />
             <Filter label="Status" value={status} onChange={setStatus} allLabel="All statuses"
               options={DOC_STATUS.map((s) => ({ value: s, label: s }))} />
-            <div>
+            <div className="w-40">
               <label htmlFor="doc-from" className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-ink-faint">Uploaded from</label>
-              <input id="doc-from" type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)}
-                className="h-9 rounded-lg border border-line bg-surface px-2.5 text-[13px] hover:border-[#CFD8E1]" />
+              <DatePicker id="doc-from" value={from} max={to || undefined} onChange={setFrom} size="sm" />
             </div>
-            <div>
+            <div className="w-40">
               <label htmlFor="doc-to" className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-ink-faint">to</label>
-              <input id="doc-to" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)}
-                className="h-9 rounded-lg border border-line bg-surface px-2.5 text-[13px] hover:border-[#CFD8E1]" />
+              <DatePicker id="doc-to" value={to} min={from || undefined} onChange={setTo} size="sm" />
             </div>
             {filtersActive ? <Button size="sm" variant="ghost" icon={X} onClick={clearFilters}>Clear filters</Button> : null}
             <span className="ml-auto text-[12.5px] tabular-nums text-ink-muted">{rows.length} of {scoped.length} documents</span>

@@ -37,13 +37,6 @@
     border-radius: 4px;
   }
   ::selection { background: var(--rw-cyan-50); color: var(--rw-indigo); }
-
-  /* Native date inputs: keep the calendar affordance visible. */
-  input[type='date']::-webkit-calendar-picker-indicator {
-    opacity: 0.5;
-    cursor: pointer;
-  }
-  input[type='date']:hover::-webkit-calendar-picker-indicator { opacity: 0.9; }
 }
 
 @layer components {
