@@ -1,0 +1,86 @@
+{
+  "$comment": "Every count is a coverage requirement, not taste. The requirement is stated beside it so nobody 'tidies' a number and silently deletes a deny case.",
+  "seed": 20260910,
+  "baseDate": "2026-09-10",
+  "$dateComment": "All timestamps are baseDate + a fixed offset. Changing either value changes every row — a decision, not an edit.",
+  "volumes": {
+    "phase": {
+      "count": 10,
+      "requirement": "Domain-fixed. reference.ts PHASES. ERD-D2 proposes this table; the 10 members are not fixture data."
+    },
+    "client_organisation": {
+      "count": 4,
+      "requirement": "One per seeded project. ERD-D7 — conditional table."
+    },
+    "document_template": {
+      "count": 18,
+      "requirement": "The distinct templates named by the standard register. Two are free-form ('Own format, per the TOR', 'Per the standard') and exercise the nullable-FK-plus-free-text case the ERD flags."
+    },
+    "person": {
+      "count": 10,
+      "requirement": "AZ §4 needs every role present AND a holder of each role with no qualifying relationship (the deny side). See coverage table in SEED-PLAN.md §3.",
+      "anchors": {
+        "director": "p-director — VISIBLE admit via Director bypass",
+        "pm_with_project": "p-pm-1 — MANAGES admit",
+        "pm_without_project": "p-pm-2 — MANAGES deny: holds the role, manages nothing",
+        "lead_with_project": "p-lead-1 — LEADS admit (prj-1, prj-3, prj-4)",
+        "lead_without_project": "p-lead-2 — LEADS deny: holds the role, leads and manages nothing",
+        "lead_who_manages": "p-lead-3 — AZ-D4: access_role 'Project lead' but named project_manager_id on prj-3. Manages a project without seeing its money",
+        "member_assigned": "p-tm-1 — MEMBER admit via ASSIGNED",
+        "member_unassigned": "p-tm-2 — MEMBER deny: on no project at all",
+        "member_other_project": "p-tm-3 — MEMBER deny for prj-1, admit for prj-3: cross-project isolation",
+        "inactive": "p-inactive — AZ-D2 account-state gate deny side"
+      }
+    },
+    "project": {
+      "count": 4,
+      "requirement": "Four states the screens and rules need.",
+      "anchors": {
+        "prj-1": "Fully populated. Every screen renders non-empty. GATE admit and deny rows both live here.",
+        "prj-2": "archived = true. VISIBLE deny side, and the only row proving the archived filter works.",
+        "prj-3": "Active, but p-tm-1 is not on it. MEMBER deny side for cross-project isolation.",
+        "prj-4": "Deliberate empty state: no documents, no invoices, no monthly reports. Exercises every zero-row screen branch."
+      }
+    },
+    "delivery_step": {
+      "perProject": 55,
+      "count": 220,
+      "requirement": "The standard template instantiated per project. NOT generated content — the 55 rows are authored domain material the inventory identified as migration payload, read from src/data/templates.ts and carried across verbatim."
+    },
+    "register_entry": {
+      "perProject": 22,
+      "count": 88,
+      "requirement": "As delivery_step. Authored migration payload, carried verbatim."
+    },
+    "document": {
+      "count": 9,
+      "requirement": "Gate coverage. Each of the three gates needs a subject WITH an attached document (admit) and a subject WITHOUT one (deny). Plus one document on prj-3 for cross-project isolation."
+    },
+    "document_version": {
+      "count": 12,
+      "requirement": "One per document (9), plus doc-1 carrying 3 versions and doc-4 carrying 2, to exercise supersede-and-retain history and the server-assigned version number."
+    },
+    "stored_file": {
+      "count": 11,
+      "requirement": "One per document_version that has bytes (12 versions less doc-9). doc-9 deliberately carries stored_file_id = null, standing for the seeded-demo documents the inventory records as having no file behind them."
+    },
+    "invoice": {
+      "count": 4,
+      "requirement": "GATE_INVOICE admit (has progress report) and deny (none), one Paid for cash-position charting, one Queried for the danger-tone branch."
+    },
+    "monthly_report": {
+      "count": 5,
+      "requirement": "Lodged and unlodged on prj-1 for the outstanding-reports screen; one linked to an invoice; one on prj-3. Distinct (project_id, month) throughout — the proposed UNIQUE."
+    },
+    "alert_read_receipt": {
+      "count": 3,
+      "requirement": "SELF admit: two receipts for p-tm-1. SELF deny: one receipt belonging to p-director, which p-tm-1 must not be able to read or write. Proves read state is per-person, replacing the global array."
+    }
+  },
+  "deliberateEmptyStates": {
+    "prj-4": "no documents, no invoices, no monthly reports",
+    "p-tm-2": "on no project — the projects list, calendar and tasks all render empty",
+    "p-pm-2": "holds Project manager but manages nothing — portfolio totals are zero, not the business total",
+    "document dv-nofile": "document_version with stored_file_id null — the 'no file behind this' preview branch"
+  }
+}

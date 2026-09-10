@@ -1,0 +1,6 @@
+# Generated rows are a build artifact, not source. The generator is the deliverable.
+# Committing rows makes regeneration a churn diff and turns "deterministic" into a
+# claim nobody re-checks.
+out/
+.verify-a/
+.verify-b/
